@@ -10,7 +10,7 @@ than 3 days and they get flagged red.
 
 ## Installation
 ```
-go get -u github.com/brentdrich/prmonitor
+go get -u github.com/brentdrich/prmonitor/cmd/prmonitor
 ```
 
 ## Usage
@@ -31,4 +31,4 @@ go get -u github.com/brentdrich/prmonitor
     prmonitor
     ```
 
- 4. Navigate to 0.0.0.0:8080
+ 4. Navigate to `0.0.0.0:8080`
