@@ -1,16 +1,20 @@
 package main
 
 import (
-	"github.com/google/go-github/github"
 	"fmt"
-	"strings"
-	"io/ioutil"
+	"github.com/google/go-github/github"
 	"gopkg.in/yaml.v2"
-	"time"
-	"net/http"
+	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"strings"
+	"time"
 )
 
+// Config contains deserialized configuration file information
+// that tells the prmonitor which repos to monitor and which
+// credentials to use when accessing github.
 type Config struct {
 	Username string
 	Password string
@@ -19,9 +23,13 @@ type Config struct {
 	Repos []Repo
 }
 
+// Repo is a single repository that should be monitored and the
+// specific settings that should work for the repository. For
+// example, high churn repos may need to be filtered by author
+// and fetch more open PRs (since this only grabs the first page).
 type Repo struct {
 	Owner string
-	Repo string
+	Repo  string
 
 	// number of open PRs to look through - can be tuned for each repo.
 	Depth int
@@ -42,7 +50,7 @@ func main() {
 	}
 
 	t = Config{}
-	err = yaml.Unmarshal([]byte(data), &t)
+	err = yaml.Unmarshal(data, &t)
 	if err != nil {
 		panic(err)
 	}
@@ -94,15 +102,15 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func render(w http.ResponseWriter, owner string, repo string, number int, title string, author string, hours time.Duration) {
-	n := hours.Hours() / (240*time.Hour).Hours()
+func render(w io.Writer, owner string, repo string, number int, title string, author string, hours time.Duration) {
+	n := hours.Hours() / (240 * time.Hour).Hours()
 	if n > 1 {
 		n = 1
 	}
 
-	stopyellow := (24*time.Hour).Hours()
+	stopyellow := (24 * time.Hour).Hours()
 
-	stopred := (24*3*time.Hour).Hours()
+	stopred := (24 * 3 * time.Hour).Hours()
 
 	color := "#777"
 	if hours.Hours() > stopred {
@@ -110,7 +118,6 @@ func render(w http.ResponseWriter, owner string, repo string, number int, title 
 	} else if hours.Hours() > stopyellow {
 		color = "#FFA500"
 	}
-
 
 	style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n*100), int(n*100))
 	fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, owner, repo, number, title, author, hours/(24*time.Hour), hours/time.Hour)
