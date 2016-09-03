@@ -12,12 +12,21 @@ import (
 type Config struct {
 	Username string
 	Password string
+
+	// Repos to pull onto dashboard
 	Repos []Repo
 }
 
 type Repo struct {
 	Owner string
 	Repo string
+
+	// number of open PRs to look through - can be tuned for each repo.
+	Depth int
+
+	// optional list of authors - if included, will only display open PRs
+	// by those authors.
+	Authors *[]string
 }
 
 func main() {
@@ -46,7 +55,7 @@ func main() {
 		op.State = "open"
 		op.Sort = "created"
 		op.Direction = "desc"
-		op.PerPage = 30
+		op.PerPage = r.Depth
 		op.Page = 0
 		oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
 		if err != nil {
@@ -56,13 +65,20 @@ func main() {
 		// make display a bit more readable
 		fmt.Printf("%s/%s\n", r.Owner, r.Repo)
 		for _, v := range oprs {
-			var start, end time.Time
-			if v.CreatedAt == nil {
-				panic(fmt.Errorf("no createdat date"))
+			start := *v.CreatedAt
+			user := *v.User
+			if r.Authors != nil {
+				// match just some authors
+				for _, a := range *r.Authors {
+					if *user.Login == a {
+						// print for single author
+						fmt.Printf("  #%d %s by %s @ %s\n", *v.Number, *v.Title, *user.Login, start.Format(time.RFC3339))
+					}
+				}
 			} else {
-				start = *v.CreatedAt
+				// match all
+				fmt.Printf("  #%d %s by %s @ %s\n", *v.Number, *v.Title, *user.Login, start.Format(time.RFC3339))
 			}
-			fmt.Printf("  #%d %s [%s to %s]\n", *v.Number, *v.Title, start.Format(time.RFC3339), end.Format(time.RFC3339))
 		}
 	}
 }
