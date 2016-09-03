@@ -4,13 +4,12 @@ go:
   - 1.7
 
 install:
-  - go get -u github.com/FiloSottile/gvt
+  - go get github.com/brentdrich/prmonitor/cmd/prmonitor
   - go get -u github.com/tsenart/deadcode
   - go get -u github.com/golang/lint/golint
   - go get -u github.com/kisielk/errcheck
   - go get -u github.com/mvdan/interfacer/cmd/interfacer
   - go get -u github.com/mdempsky/unconvert
-  - gvt restore
 
 script:
   - ./build.sh
