@@ -2,9 +2,11 @@
 
 **prmonitor** is a dedicated dashboard that monitors outstanding
 pull request across multiple repositories. It is intended to be
-run on displays without any inputs.
+run on displays without any inputs. Any PRs that take longer than
+a day are considered risky and get flagged orange. Any longer
+than 3 days and they get flagged red.
 
-![example.png]
+![Example](/example.png)
 
 ## Installation
 ```
