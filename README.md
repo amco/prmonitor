@@ -20,12 +20,26 @@ than 3 days and they get flagged red.
     godep go install
     ```
 
-## Usage
+## Running Locally
  1. Create a [personal access token](https://github.com/blog/1509-personal-api-tokens) at Github
 
- 3. Update the CONFIG variable below and run:
+ 2. Update the CONFIG variable below and run:
     ```
     PORT=8080 CONFIG='{"username":<your-username>,"password":<your-personal-access-token>,"repos":[{"owner":"docker","repo":"swarmkit","depth":15}]}' prmonitor
     ```
 
  4. Navigate to `0.0.0.0:8080`
+
+## Running on Heroku
+Deploying prmonitor to heroku requires that the vendor directory is included in
+the repository. `deploy.sh` is a script that creates a new branch that includes the
+vendor directory (so master doesn't have to) and pushes it out to heroku automatically.
+
+ 1. Set up a heroku app and define a [CONFIG variable](https://devcenter.heroku.com/articles/config-vars)
+
+ 2. Set up [heroku-cli](https://devcenter.heroku.com/articles/deploying-go)
+
+ 3. Run the deployment script
+    ```
+    deploy.sh
+    ```
