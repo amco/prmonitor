@@ -18,11 +18,10 @@ func BasicAuth(username string, password string, next http.HandlerFunc) http.Han
 	}
 }
 
-func SSLRequired(next http.HandlerFunc) http.HandlerFunc {
+func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Scheme != "https" {
-			r.URL.Scheme = "https"
-			w.Header().Set("Location", r.URL.String())
+		if r.Header.Get("X-Forwarded-Proto") != "https" {
+			w.Header().Set("Location", sslhost)
 			w.WriteHeader(301)
 			return
 		}

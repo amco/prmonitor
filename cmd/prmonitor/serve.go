@@ -62,7 +62,7 @@ func main() {
 	}
 	client = github.NewClient(tp.Client())
 
-	http.HandleFunc("/", prmonitor.SSLRequired(prmonitor.BasicAuth(t.DashboardUser, t.DashboardPass, dashboard)))
+	http.HandleFunc("/", prmonitor.SSLRequired(os.Getenv("SSLHOST"), prmonitor.BasicAuth(t.DashboardUser, t.DashboardPass, dashboard)))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
 }
 
