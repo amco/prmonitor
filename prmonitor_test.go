@@ -6,6 +6,7 @@ import (
 	"testing"
 )
 
+// Basic Auth Tests
 func TestBasicAuthFailure(t *testing.T) {
 	w := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", "/", nil)
@@ -69,6 +70,73 @@ func TestBasicAuthSuccess2(t *testing.T) {
 
 	if w.Header().Get("WWW-Authenticate") != "" {
 		t.Logf("ERROR: unexpected WWW-Authenticate header on successful auth")
+		t.Fail()
+		return
+	}
+}
+
+// SSL Required Tests
+func TestSSLRequiredRedirects(t *testing.T) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://example.org/secure", nil)
+
+	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(299)
+		return
+	})(w, r)
+
+	if w.Code != 301 {
+		t.Logf("ERROR: http code '%d' expected, but got '%d'", 301, w.Code)
+		t.Fail()
+		return
+	}
+
+	if w.Header().Get("Location") != "https://example.org/secure" {
+		t.Logf("ERROR: location '%s' expected, but got '%s'", "https://example.org/secure", w.Header().Get("Location"))
+		t.Fail()
+		return
+	}
+}
+
+func TestSSLRequiredRedirects2(t *testing.T) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://other.example.org/1", nil)
+
+	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(299)
+		return
+	})(w, r)
+
+	if w.Code != 301 {
+		t.Logf("ERROR: http code '%d' expected, but got '%d'", 301, w.Code)
+		t.Fail()
+		return
+	}
+
+	if w.Header().Get("Location") != "https://other.example.org/1" {
+		t.Logf("ERROR: location '%s' expected, but got '%s'", "https://other.example.org/1", w.Header().Get("Location"))
+		t.Fail()
+		return
+	}
+}
+
+func TestSSLNotRedirectedIfAlreadyHTTPS(t *testing.T) {
+	w := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "https://other.example.org/1", nil)
+
+	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(299)
+		return
+	})(w, r)
+
+	if w.Code != 299 {
+		t.Logf("ERROR: http code '%d' expected, but got '%d'", 299, w.Code)
+		t.Fail()
+		return
+	}
+
+	if w.Header().Get("Location") != "" {
+		t.Logf("ERROR: no location expected but got '%s'", w.Header().Get("Location"))
 		t.Fail()
 		return
 	}

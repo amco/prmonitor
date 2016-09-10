@@ -17,3 +17,15 @@ func BasicAuth(username string, password string, next http.HandlerFunc) http.Han
 		next(w, r)
 	}
 }
+
+func SSLRequired(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Scheme != "https" {
+			r.URL.Scheme = "https"
+			w.Header().Set("Location", r.URL.String())
+			w.WriteHeader(301)
+			return
+		}
+		next(w, r)
+	}
+}
