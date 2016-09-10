@@ -9,9 +9,16 @@ than 3 days and they get flagged red.
 ![Example](/example.png)
 
 ## Installation
-```
-go get -u github.com/brentdrich/prmonitor
-```
+ 1. You'll need godeps if you don't already have it:
+    ```
+    go get github.com/tools/godep
+    ```
+
+ 2. Fetch the project and install with godeps.
+    ```
+    go get github.com/brentdrich/prmonitor
+    godep go install
+    ```
 
 ## Usage
  1. Create a [personal access token](https://github.com/blog/1509-personal-api-tokens) at Github
