@@ -5,11 +5,14 @@ gofmt -l -w .
 test -z "$(gofmt -s -d .)"
 
 # will it build?
-godep go install github.com/brentdrich/prmonitor
+godep go install github.com/brentdrich/prmonitor/cmd/prmonitor
+
+# will it test?
+go test
 
 # will it lint?
-deadcode .
-golint github.com/brentdrich/prmonitor
-errcheck github.com/brentdrich/prmonitor
-interfacer github.com/brentdrich/prmonitor
-unconvert github.com/brentdrich/prmonitor
+deadcode ./cmd/prmonitor
+golint github.com/brentdrich/prmonitor/cmd/prmonitor
+errcheck github.com/brentdrich/prmonitor/cmd/prmonitor
+interfacer github.com/brentdrich/prmonitor/cmd/prmonitor
+unconvert github.com/brentdrich/prmonitor/cmd/prmonitor
