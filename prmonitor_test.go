@@ -1,9 +1,9 @@
 package prmonitor
 
 import (
-	"testing"
 	"net/http"
 	"net/http/httptest"
+	"testing"
 )
 
 func TestBasicAuthFailure(t *testing.T) {

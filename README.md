@@ -25,7 +25,7 @@ than 3 days and they get flagged red.
 
  2. Update the CONFIG variable below and run:
     ```
-    PORT=8080 CONFIG='{"username":<your-username>,"password":<your-personal-access-token>,"repos":[{"owner":"docker","repo":"swarmkit","depth":15}]}' prmonitor
+    PORT=8080 CONFIG='{"dashboard_user":<username>,"dashboard_pass":<password>,"github_user":<your-username>,"github_pass":<your-personal-access-token>,"repos":[{"owner":"docker","repo":"swarmkit","depth":15}]}' prmonitor
     ```
 
  4. Navigate to `0.0.0.0:8080`

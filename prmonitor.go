@@ -1,9 +1,9 @@
 package prmonitor
 
 import (
-	"net/http"
-	"fmt"
 	"encoding/base64"
+	"fmt"
+	"net/http"
 )
 
 func BasicAuth(username string, password string, next http.HandlerFunc) http.HandlerFunc {

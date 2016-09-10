@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/brentdrich/prmonitor"
 	"github.com/google/go-github/github"
 	"io"
 	"log"
@@ -16,8 +17,13 @@ import (
 // that tells the prmonitor which repos to monitor and which
 // credentials to use when accessing github.
 type Config struct {
-	Username string
-	Password string
+	// Dashboard user
+	DashboardUser string `json:"dashboard_user"`
+	DashboardPass string `json:"dashboard_pass"`
+
+	// Github API user
+	GithubUser string `json:"github_user"`
+	GithubPass string `json:"github_pass"`
 
 	// Repos to pull onto dashboard
 	Repos []Repo
@@ -51,12 +57,12 @@ func main() {
 	}
 
 	tp := github.BasicAuthTransport{
-		Username: strings.TrimSpace(t.Username),
-		Password: strings.TrimSpace(t.Password),
+		Username: strings.TrimSpace(t.GithubUser),
+		Password: strings.TrimSpace(t.GithubPass),
 	}
 	client = github.NewClient(tp.Client())
 
-	http.HandleFunc("/", dashboard)
+	http.HandleFunc("/", prmonitor.BasicAuth(t.DashboardUser, t.DashboardPass, dashboard))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
 }
 
