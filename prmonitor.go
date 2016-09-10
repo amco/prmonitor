@@ -1,13 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/google/go-github/github"
-	"gopkg.in/yaml.v2"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 )
@@ -44,13 +44,8 @@ var t Config
 var client *github.Client
 
 func main() {
-	data, err := ioutil.ReadFile("config.yaml")
-	if err != nil {
-		panic(err)
-	}
-
 	t = Config{}
-	err = yaml.Unmarshal(data, &t)
+	err := json.Unmarshal([]byte(os.Getenv("CONFIG")), &t)
 	if err != nil {
 		panic(err)
 	}
