@@ -9,26 +9,23 @@ than 3 days and they get flagged red.
 ![Example](/example.png)
 
 ## Installation
-```
-go get -u github.com/brentdrich/prmonitor/cmd/prmonitor
-```
+ 1. You'll need godeps if you don't already have it:
+    ```
+    go get github.com/tools/godep
+    ```
+
+ 2. Fetch the project and install with godeps.
+    ```
+    go get github.com/brentdrich/prmonitor
+    godep go install
+    ```
 
 ## Usage
  1. Create a [personal access token](https://github.com/blog/1509-personal-api-tokens) at Github
 
- 2. Create a config.yaml file in a directory somewhere
+ 3. Update the CONFIG variable below and run:
     ```
-    username: <your-user-name>
-    password: <your-personal-access-token>
-    repos:
-     - owner: docker
-       repo: swarmkit
-       depth: 100
-    ```
-
- 3. From the same directory, run:
-    ```
-    prmonitor
+    PORT=8080 CONFIG='{"username":<your-username>,"password":<your-personal-access-token>,"repos":[{"owner":"docker","repo":"swarmkit","depth":15}]}' prmonitor
     ```
 
  4. Navigate to `0.0.0.0:8080`
