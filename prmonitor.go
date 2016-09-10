@@ -57,7 +57,7 @@ func main() {
 	client = github.NewClient(tp.Client())
 
 	http.HandleFunc("/", dashboard)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
 }
 
 func dashboard(w http.ResponseWriter, r *http.Request) {
