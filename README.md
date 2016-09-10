@@ -10,7 +10,7 @@ than 3 days and they get flagged red.
 
 ## Installation
 ```
-go get -u github.com/brentdrich/prmonitor/cmd/prmonitor
+go get -u github.com/brentdrich/prmonitor
 ```
 
 ## Usage
