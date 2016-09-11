@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
+	"os"
 )
 
 // Basic Auth Tests
@@ -143,4 +145,25 @@ func TestSSLNotRedirectedIfAlreadyHTTPS(t *testing.T) {
 		t.Fail()
 		return
 	}
+}
+
+// Render Tests - attempt to render the page to a tmp file so it
+// can be visually inspected.
+func TestRender(t *testing.T) {
+	prs := []SummarizedPullRequest{
+		{
+			Owner: "brentdrich",
+			Repo: "prmonitor",
+			Number: 4,
+			Title: "test pr",
+			Author: "brentdrich",
+			Opened: time.Now().Add(5*time.Hour),
+		},
+	}
+	f, err := os.Create("tmp.html")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	Render(f, prs)
 }
