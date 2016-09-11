@@ -78,10 +78,10 @@ func TestBasicAuthSuccess2(t *testing.T) {
 // SSL Required Tests
 func TestSSLRequiredRedirects(t *testing.T) {
 	w := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "http://example.org/secure", nil)
+	r, _ := http.NewRequest("GET", "http://example.org/unsecure", nil)
 	r.Header.Set("X-Forwarded-Proto", "http")
 
-	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+	SSLRequired("https://example.org/secure", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(299)
 		return
 	})(w, r)
@@ -104,7 +104,7 @@ func TestSSLRequiredRedirects2(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://other.example.org/1", nil)
 	r.Header.Set("X-Forwarded-Proto", "http")
 
-	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+	SSLRequired("https://other.example.org/1", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(299)
 		return
 	})(w, r)
@@ -127,7 +127,7 @@ func TestSSLNotRedirectedIfAlreadyHTTPS(t *testing.T) {
 	r, _ := http.NewRequest("GET", "http://other.example.org/1", nil)
 	r.Header.Set("X-Forwarded-Proto", "https")
 
-	SSLRequired(func(w http.ResponseWriter, r *http.Request) {
+	SSLRequired("http://other.example.org/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(299)
 		return
 	})(w, r)
