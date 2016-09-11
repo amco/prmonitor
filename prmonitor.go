@@ -59,9 +59,32 @@ type SummarizedPullRequest struct {
 	Author string
 
 	// the time the PR was opened.
-	Opened time.Time
+	OpenedAt time.Time
 }
 
 func Render(w io.Writer, prs []SummarizedPullRequest) {
-	fmt.Fprintf(w, "hello world")
+	fmt.Fprintf(w, "<html><body style='background: #333; color: #fff;'>")
+	for _, pr := range prs {
+		hours := time.Since(pr.OpenedAt)
+
+		n := hours.Hours() / (240 * time.Hour).Hours()
+		if n > 1 {
+			n = 1
+		}
+
+		stopyellow := (24 * time.Hour).Hours()
+
+		stopred := (24 * 3 * time.Hour).Hours()
+
+		color := "#777"
+		if hours.Hours() > stopred {
+			color = "#FF4500"
+		} else if hours.Hours() > stopyellow {
+			color = "#FFA500"
+		}
+
+		style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n * 100), int(n * 100))
+		fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author, hours / (24 * time.Hour), hours / time.Hour)
+	}
+	fmt.Fprintf(w, "</body></html>")
 }
