@@ -3,9 +3,16 @@ package prmonitor
 import (
 	"encoding/base64"
 	"fmt"
+	"io"
 	"net/http"
+	"time"
 )
 
+// Middlewares
+
+// BasicAuth forces use of browser basic auth. If auth credentials aren't
+// presented or are invalid, it sends back a WWW-Authenticate header to
+// get the browser to prompt the user to enter credentials.
 func BasicAuth(username string, password string, next http.HandlerFunc) http.HandlerFunc {
 	match := fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", username, password))))
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +25,10 @@ func BasicAuth(username string, password string, next http.HandlerFunc) http.Han
 	}
 }
 
+// SSLRequired redirects to an SSL host if the incoming request was
+// not made with HTTPS. When placed before the BasicAuth middleware,
+// it ensures the basic auth handshake doesn't occur outside of https
+// so credentials aren't sent as plaintext.
 func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Forwarded-Proto") != "https" {
@@ -27,4 +38,53 @@ func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+// Rendering Code
+type SummarizedPullRequest struct {
+	// the organization that owns the repository.
+	Owner string
+
+	// the repository name that the PR is located in.
+	Repo string
+
+	// the visible github PR #
+	Number int
+
+	// the title of the PR
+	Title string
+
+	// the username of the author of the PR.
+	Author string
+
+	// the time the PR was opened.
+	OpenedAt time.Time
+}
+
+func Render(w io.Writer, prs []SummarizedPullRequest) {
+	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='600'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
+	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", time.Now().Format("2006-01-02 15:04:05"))
+	for _, pr := range prs {
+		hours := time.Since(pr.OpenedAt)
+
+		n := hours.Hours() / (240 * time.Hour).Hours()
+		if n > 1 {
+			n = 1
+		}
+
+		stopyellow := (24 * time.Hour).Hours()
+
+		stopred := (24 * 3 * time.Hour).Hours()
+
+		color := "#777"
+		if hours.Hours() > stopred {
+			color = "#FF4500"
+		} else if hours.Hours() > stopyellow {
+			color = "#FFA500"
+		}
+
+		style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n*100), int(n*100))
+		fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author, hours/(24*time.Hour), hours/time.Hour)
+	}
+	fmt.Fprintf(w, "</body></html>")
 }
