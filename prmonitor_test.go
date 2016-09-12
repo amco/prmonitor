@@ -3,9 +3,9 @@ package prmonitor
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
-	"os"
 )
 
 // Basic Auth Tests
@@ -152,36 +152,36 @@ func TestSSLNotRedirectedIfAlreadyHTTPS(t *testing.T) {
 func TestRender(t *testing.T) {
 	prs := []SummarizedPullRequest{
 		{
-			Owner: "brentdrich",
-			Repo: "prmonitor",
-			Number: 4,
-			Title: "test pr",
-			Author: "brentdrich",
-			OpenedAt: time.Now().Add(-5*time.Hour),
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
+			Number:   4,
+			Title:    "test pr",
+			Author:   "brentdrich",
+			OpenedAt: time.Now().Add(-5 * time.Hour),
 		},
 		{
-			Owner: "brentdrich",
-			Repo: "prmonitor",
-			Number: 5,
-			Title: "yellow zone pr",
-			Author: "brentdrich",
-			OpenedAt: time.Now().Add(-25*time.Hour),
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
+			Number:   5,
+			Title:    "yellow zone pr",
+			Author:   "brentdrich",
+			OpenedAt: time.Now().Add(-25 * time.Hour),
 		},
 		{
-			Owner: "brentdrich",
-			Repo: "prmonitor",
-			Number: 6,
-			Title: "red zone pr",
-			Author: "brentdrich",
-			OpenedAt: time.Now().Add(-73*time.Hour),
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
+			Number:   6,
+			Title:    "red zone pr",
+			Author:   "brentdrich",
+			OpenedAt: time.Now().Add(-73 * time.Hour),
 		},
 		{
-			Owner: "brentdrich",
-			Repo: "prmonitor",
-			Number: 7,
-			Title: "boundary value pr",
-			Author: "brentdrich",
-			OpenedAt: time.Now().Add(-1000*time.Hour),
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
+			Number:   7,
+			Title:    "boundary value pr",
+			Author:   "brentdrich",
+			OpenedAt: time.Now().Add(-1000 * time.Hour),
 		},
 	}
 	f, err := os.Create("tmp.html")

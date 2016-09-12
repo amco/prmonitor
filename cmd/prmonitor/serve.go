@@ -80,7 +80,7 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// load up the prs
-		var prs []prmonitor.SummarizedPullRequest{}
+		var prs []prmonitor.SummarizedPullRequest
 		for _, v := range oprs {
 			start := *v.CreatedAt
 			user := *v.User
@@ -90,11 +90,11 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 					if *user.Login == a {
 						// print for single author
 						prs = append(prs, prmonitor.SummarizedPullRequest{
-							Owner: r.Owner,
-							Repo: r.Repo,
-							Number: *v.Number,
-							Title: *v.Title,
-							Author: *user.Login,
+							Owner:    r.Owner,
+							Repo:     r.Repo,
+							Number:   *v.Number,
+							Title:    *v.Title,
+							Author:   *user.Login,
 							OpenedAt: start,
 						})
 					}
@@ -102,11 +102,11 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 			} else {
 				// match all
 				prs = append(prs, prmonitor.SummarizedPullRequest{
-					Owner: r.Owner,
-					Repo: r.Repo,
-					Number: *v.Number,
-					Title: *v.Title,
-					Author: *user.Login,
+					Owner:    r.Owner,
+					Repo:     r.Repo,
+					Number:   *v.Number,
+					Title:    *v.Title,
+					Author:   *user.Login,
 					OpenedAt: start,
 				})
 			}

@@ -3,8 +3,8 @@ package prmonitor
 import (
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"io"
+	"net/http"
 	"time"
 )
 
@@ -39,7 +39,6 @@ func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
-
 
 // Rendering Code
 type SummarizedPullRequest struct {
@@ -84,8 +83,8 @@ func Render(w io.Writer, prs []SummarizedPullRequest) {
 			color = "#FFA500"
 		}
 
-		style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n * 100), int(n * 100))
-		fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author, hours / (24 * time.Hour), hours / time.Hour)
+		style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n*100), int(n*100))
+		fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author, hours/(24*time.Hour), hours/time.Hour)
 	}
 	fmt.Fprintf(w, "</body></html>")
 }
