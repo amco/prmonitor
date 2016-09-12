@@ -63,7 +63,8 @@ type SummarizedPullRequest struct {
 }
 
 func Render(w io.Writer, prs []SummarizedPullRequest) {
-	fmt.Fprintf(w, "<html><body style='background: #333; color: #fff;'>")
+	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='600'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
+	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", time.Now().Format("2006-01-02 15:04:05"))
 	for _, pr := range prs {
 		hours := time.Since(pr.OpenedAt)
 
