@@ -65,6 +65,8 @@ func main() {
 }
 
 func dashboard(w http.ResponseWriter, r *http.Request) {
+	var prs []prmonitor.SummarizedPullRequest
+
 	for _, r := range t.Repos {
 		// get 30 latest open pull requests.
 		op := &github.PullRequestListOptions{}
@@ -80,7 +82,6 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// load up the prs
-		var prs []prmonitor.SummarizedPullRequest
 		for _, v := range oprs {
 			start := *v.CreatedAt
 			user := *v.User
@@ -111,8 +112,8 @@ func dashboard(w http.ResponseWriter, r *http.Request) {
 				})
 			}
 		}
-
-		// render the dashboard
-		prmonitor.Render(w, prs)
 	}
+
+	// render the dashboard
+	prmonitor.Render(w, prs)
 }
