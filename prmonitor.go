@@ -97,11 +97,28 @@ func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// Timestamp adds a request header that includes an RFC3339 timestamp.
+// The purpose of this middleware is to eliminate the need to use time.Now
+// in the rest of the application, placing time sensitive calculations
+// under better control.
+func Timestamp(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Timestamp", time.Now().Format(time.RFC3339))
+		next(w, r)
+	}
+}
+
 // Dashboard responds to an http request with a dashboard displaying
 // the configured pull requests by pulling information down from
 // github.
 func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
+		now, err := time.Parse(time.RFC3339, r.Header.Get("X-Timestamp"))
+		if err != nil {
+			panic(err)
+		}
+
 		var prs []SummarizedPullRequest
 
 		for _, r := range t.Repos {
@@ -152,16 +169,16 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 		}
 
 		// render the dashboard
-		Render(w, prs)
+		Render(w, now, prs)
 	}
 }
 
 // Render templates pull request information onto an html page.
-func Render(w io.Writer, prs []SummarizedPullRequest) {
+func Render(w io.Writer, now time.Time, prs []SummarizedPullRequest) {
 	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='600'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
-	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", time.Now().Format("2006-01-02 15:04:05"))
+	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
 	for _, pr := range prs {
-		hours := time.Since(pr.OpenedAt)
+		hours := now.Sub(pr.OpenedAt)
 
 		n := hours.Hours() / (240 * time.Hour).Hours()
 		if n > 1 {
