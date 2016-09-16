@@ -1,6 +1,8 @@
 package prmonitor
 
 import (
+	"github.com/dnaeon/go-vcr/recorder"
+	"github.com/google/go-github/github"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -190,4 +192,38 @@ func TestRender(t *testing.T) {
 	}
 	defer f.Close()
 	Render(f, prs)
+}
+
+// Dashboard Tests
+func TestDashboard(t *testing.T) {
+	r, err := recorder.New("github")
+	if err != nil {
+		panic(err)
+	}
+	defer r.Stop()
+	h := &http.Client{
+		Timeout:   1 * time.Second,
+		Transport: r.Transport,
+	}
+	w := httptest.NewRecorder()
+	req, err := http.NewRequest("GET", "/", nil)
+	if err != nil {
+		panic(err)
+	}
+	Dashboard(
+		Config{
+			Repos: []Repo{
+				{
+					Owner: "Docker",
+					Repo:  "swarmkit",
+					Depth: 15,
+				},
+			},
+		},
+		github.NewClient(
+			h,
+		),
+	)(w, req)
+	t.Logf("%s", w.Body.String())
+	t.Fail()
 }
