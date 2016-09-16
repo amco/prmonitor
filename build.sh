@@ -11,8 +11,8 @@ godep go install github.com/brentdrich/prmonitor/cmd/prmonitor
 go test
 
 # will it lint?
-deadcode ./cmd/prmonitor
-golint github.com/brentdrich/prmonitor/cmd/prmonitor
-errcheck github.com/brentdrich/prmonitor/cmd/prmonitor
-interfacer github.com/brentdrich/prmonitor/cmd/prmonitor
-unconvert github.com/brentdrich/prmonitor/cmd/prmonitor
+deadcode ./..
+golint github.com/brentdrich/prmonitor
+errcheck -ignore '[rR]ead|[wW]rite|[cC]lose' github.com/brentdrich/prmonitor
+interfacer github.com/brentdrich/prmonitor
+unconvert github.com/brentdrich/prmonitor

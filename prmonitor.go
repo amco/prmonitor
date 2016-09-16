@@ -3,10 +3,67 @@ package prmonitor
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/google/go-github/github"
 	"io"
 	"net/http"
 	"time"
 )
+
+// Data Structures
+
+// SummarizedPullRequest contains information necessary to
+// render a PR.
+type SummarizedPullRequest struct {
+	// the organization that owns the repository.
+	Owner string
+
+	// the repository name that the PR is located in.
+	Repo string
+
+	// the visible github PR #
+	Number int
+
+	// the title of the PR
+	Title string
+
+	// the username of the author of the PR.
+	Author string
+
+	// the time the PR was opened.
+	OpenedAt time.Time
+}
+
+// Config contains deserialized configuration file information
+// that tells the prmonitor which repos to monitor and which
+// credentials to use when accessing github.
+type Config struct {
+	// Dashboard user
+	DashboardUser string `json:"dashboard_user"`
+	DashboardPass string `json:"dashboard_pass"`
+
+	// Github API user
+	GithubUser string `json:"github_user"`
+	GithubPass string `json:"github_pass"`
+
+	// Repos to pull onto dashboard
+	Repos []Repo
+}
+
+// Repo is a single repository that should be monitored and the
+// specific settings that should work for the repository. For
+// example, high churn repos may need to be filtered by author
+// and fetch more open PRs (since this only grabs the first page).
+type Repo struct {
+	Owner string
+	Repo  string
+
+	// number of open PRs to look through - can be tuned for each repo.
+	Depth int
+
+	// optional list of authors - if included, will only display open PRs
+	// by those authors.
+	Authors *[]string
+}
 
 // Middlewares
 
@@ -40,27 +97,66 @@ func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// Rendering Code
-type SummarizedPullRequest struct {
-	// the organization that owns the repository.
-	Owner string
+// Dashboard responds to an http request with a dashboard displaying
+// the configured pull requests by pulling information down from
+// github.
+func Dashboard(t Config, client *github.Client) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var prs []SummarizedPullRequest
 
-	// the repository name that the PR is located in.
-	Repo string
+		for _, r := range t.Repos {
+			// get 30 latest open pull requests.
+			op := &github.PullRequestListOptions{}
+			op.State = "open"
+			op.Sort = "created"
+			op.Direction = "desc"
+			op.PerPage = r.Depth
+			op.Page = 0
+			op.Base = "master"
+			oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
+			if err != nil {
+				panic(err)
+			}
 
-	// the visible github PR #
-	Number int
+			// load up the prs
+			for _, v := range oprs {
+				start := *v.CreatedAt
+				user := *v.User
+				if r.Authors != nil {
+					// match just some authors
+					for _, a := range *r.Authors {
+						if *user.Login == a {
+							// print for single author
+							prs = append(prs, SummarizedPullRequest{
+								Owner:    r.Owner,
+								Repo:     r.Repo,
+								Number:   *v.Number,
+								Title:    *v.Title,
+								Author:   *user.Login,
+								OpenedAt: start,
+							})
+						}
+					}
+				} else {
+					// match all
+					prs = append(prs, SummarizedPullRequest{
+						Owner:    r.Owner,
+						Repo:     r.Repo,
+						Number:   *v.Number,
+						Title:    *v.Title,
+						Author:   *user.Login,
+						OpenedAt: start,
+					})
+				}
+			}
+		}
 
-	// the title of the PR
-	Title string
-
-	// the username of the author of the PR.
-	Author string
-
-	// the time the PR was opened.
-	OpenedAt time.Time
+		// render the dashboard
+		Render(w, prs)
+	}
 }
 
+// Render templates pull request information onto an html page.
 func Render(w io.Writer, prs []SummarizedPullRequest) {
 	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='600'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
 	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", time.Now().Format("2006-01-02 15:04:05"))
