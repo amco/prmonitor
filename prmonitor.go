@@ -206,24 +206,25 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time) {
 	for {
 		v, more := <-in
 		if more {
-			// TODO add back author processing
-			// TODO handle case where PR times after AFTER now.
-			// TODO handle case where PR wouldn't actually be visible
 			end := now
 			if v.PR.ClosedAt != nil {
 				end = *v.PR.ClosedAt
 			}
-			start := *v.PR.CreatedAt
-			user := *v.PR.User
-			out <- SummarizedPullRequest{
-				Owner:    v.Owner,
-				Repo:     v.Repo,
-				Number:   *v.PR.Number,
-				Title:    *v.PR.Title,
-				Author:   *user.Login,
-				OpenedAt: start,
-				ClosedAt: end,
+			if now.Sub(end) > 240*time.Hour {
+				continue
 			}
+				start := *v.PR.CreatedAt
+				user := *v.PR.User
+				out <- SummarizedPullRequest{
+					Owner:    v.Owner,
+					Repo:     v.Repo,
+					Number:   *v.PR.Number,
+					Title:    *v.PR.Title,
+					Author:   *user.Login,
+					OpenedAt: start,
+					ClosedAt: end,
+				}
+
 		} else {
 			close(out)
 			return
