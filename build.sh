@@ -4,11 +4,15 @@ set -e
 gofmt -l -w .
 test -z "$(gofmt -s -d .)"
 
+# fetch vendor dep?
+godep update ./...
+
+
 # will it build?
 godep go install github.com/brentdrich/prmonitor/cmd/prmonitor
 
 # will it test?
-go test
+godep go test
 
 # will it lint?
 deadcode ./..

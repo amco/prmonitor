@@ -5,6 +5,7 @@ go:
 
 install:
   - go get github.com/brentdrich/prmonitor/cmd/prmonitor
+  - go get github.com/dnaeon/go-vcr/recorder
   - go get github.com/tools/godep
   - go get -u github.com/tsenart/deadcode
   - go get -u github.com/golang/lint/golint
