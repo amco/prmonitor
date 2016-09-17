@@ -166,7 +166,7 @@ func TestTimestamp(t *testing.T) {
 		t.Fail()
 	}
 
-	reqtime, err := time.Parse(time.RFC3339, w.Header().Get("X-Timestamp"))
+	reqtime, err := time.Parse(time.RFC3339, r.Header.Get("X-Timestamp"))
 	if err != nil {
 		t.Logf("couldn't parse time %s, got error: %s", w.Header().Get("X-Timestamp"), err)
 		t.Fail()

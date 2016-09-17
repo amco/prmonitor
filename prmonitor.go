@@ -109,7 +109,7 @@ func SSLRequired(sslhost string, next http.HandlerFunc) http.HandlerFunc {
 // under better control.
 func Timestamp(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Timestamp", time.Now().Format(time.RFC3339))
+		r.Header.Set("X-Timestamp", time.Now().Format(time.RFC3339))
 		next(w, r)
 	}
 }
