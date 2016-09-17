@@ -12,12 +12,6 @@ import (
 
 // Data Structures
 
-type pipelinePR struct {
-	Owner string
-	Repo  string
-	PR    *github.PullRequest
-}
-
 // SummarizedPullRequest contains information necessary to
 // render a PR.
 type SummarizedPullRequest struct {
@@ -129,7 +123,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 		}
 
 		re := make(chan Repo)
-		p := make(chan pipelinePR)
+		p := make(chan *github.PullRequest)
 		f := make(chan SummarizedPullRequest)
 		done := make(chan bool)
 
@@ -151,7 +145,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 
 // Retrieve pulls in a repository and fetches pull requests that
 // are passed to the next stage in the pipeline.
-func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
+func Retrieve(in chan Repo, out chan *github.PullRequest, client *github.Client) {
 	for {
 		r, more := <-in
 		if more {
@@ -167,11 +161,7 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 				return
 			}
 			for _, v := range oprs {
-				out <- pipelinePR{
-					Owner: r.Owner,
-					Repo:  r.Repo,
-					PR:    v,
-				}
+				out <- v
 			}
 
 			cp := &github.PullRequestListOptions{}
@@ -186,11 +176,7 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 				return
 			}
 			for _, v := range cprs {
-				out <- pipelinePR{
-					Owner: r.Owner,
-					Repo:  r.Repo,
-					PR:    v,
-				}
+				out <- v
 			}
 		} else {
 			close(out)
@@ -202,21 +188,21 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 // Filter reads PRs coming in from github and writes out summaries
 // that can be aggregated and used by Render. Filters out PRs by
 // author if present and by the time window.
-func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
+func Filter(in chan *github.PullRequest, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
 	for {
 		v, more := <-in
 		if more {
 			ok := false
 			end := now
-			if v.PR.ClosedAt != nil {
-				end = *v.PR.ClosedAt
+			if v.ClosedAt != nil {
+				end = *v.ClosedAt
 			}
 			if now.Sub(end) > 240*time.Hour {
 				continue
 			}
 			if authors != nil {
 				for _, a := range *authors {
-					if a == *v.PR.User.Login {
+					if a == *v.User.Login {
 						ok = true
 					}
 				}
@@ -224,13 +210,13 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time, a
 				ok = true
 			}
 			if ok {
-				start := *v.PR.CreatedAt
-				user := *v.PR.User
+				start := *v.CreatedAt
+				user := *v.User
 				out <- SummarizedPullRequest{
-					Owner:    v.Owner,
-					Repo:     v.Repo,
-					Number:   *v.PR.Number,
-					Title:    *v.PR.Title,
+					Owner:    *v.Base.Repo.Owner.Login,
+					Repo:     *v.Base.Repo.Name,
+					Number:   *v.Number,
+					Title:    *v.Title,
 					Author:   *user.Login,
 					OpenedAt: start,
 					ClosedAt: end,
