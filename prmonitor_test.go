@@ -271,6 +271,10 @@ func TestDashboard(t *testing.T) {
 					Depth: 15,
 				},
 			},
+			Authors: &[]string{
+				"aaronlehmann",
+				"LK4D4",
+			},
 		},
 		github.NewClient(
 			h,
