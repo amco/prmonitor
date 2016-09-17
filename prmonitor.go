@@ -248,7 +248,7 @@ func Display(in chan SummarizedPullRequest, done chan bool, w io.Writer, now tim
 				start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 				end := (total - now.Sub(pr.ClosedAt).Hours()) / total
 				color := "#00cc66"
-				style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
+				style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
 				fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
 			}
 			fmt.Fprintf(w, "</body></html>")
