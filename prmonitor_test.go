@@ -1,6 +1,7 @@
 package prmonitor
 
 import (
+	"fmt"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/go-github/github"
 	"net/http"
@@ -166,7 +167,7 @@ func TestTimestamp(t *testing.T) {
 		t.Fail()
 	}
 
-	reqtime, err := time.Parse(time.RFC3339, w.Header().Get("X-Timestamp"))
+	reqtime, err := time.Parse(time.RFC3339, r.Header.Get("X-Timestamp"))
 	if err != nil {
 		t.Logf("couldn't parse time %s, got error: %s", w.Header().Get("X-Timestamp"), err)
 		t.Fail()
@@ -179,17 +180,27 @@ func TestTimestamp(t *testing.T) {
 }
 
 // Render Tests - attempt to render the page to a tmp file so it
-// can be visually inspected.
+// can be visually inspected using hand-crafted data
 func TestRender(t *testing.T) {
 	now := time.Now()
 	prs := []SummarizedPullRequest{
 		{
 			Owner:    "brentdrich",
 			Repo:     "prmonitor",
+			Number:   2,
+			Title:    "closed pr",
+			Author:   "brentdrich",
+			OpenedAt: now.Add(-72 * time.Hour),
+			ClosedAt: now.Add(-24 * time.Hour),
+		},
+		{
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
 			Number:   4,
 			Title:    "test pr",
 			Author:   "brentdrich",
-			OpenedAt: now.Add(-5 * time.Hour),
+			OpenedAt: now.Add(-1 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -198,6 +209,7 @@ func TestRender(t *testing.T) {
 			Title:    "yellow zone pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-25 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -206,6 +218,7 @@ func TestRender(t *testing.T) {
 			Title:    "red zone pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-73 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -214,6 +227,7 @@ func TestRender(t *testing.T) {
 			Title:    "boundary value pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-1000 * time.Hour),
+			ClosedAt: now,
 		},
 	}
 	f, err := os.Create("tmp.html")
@@ -231,7 +245,7 @@ func TestRender(t *testing.T) {
 	<-d
 }
 
-// Dashboard Tests
+// Dashboard Tests - outputs a rendered dashboard from cached or real data.
 func TestDashboard(t *testing.T) {
 	r, err := recorder.New("github")
 	if err != nil {
@@ -247,7 +261,7 @@ func TestDashboard(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	req.Header.Set("X-Timestamp", "2016-09-16T15:04:05Z")
+	req.Header.Set("X-Timestamp", time.Now().Format(time.RFC3339))
 	Dashboard(
 		Config{
 			Repos: []Repo{
@@ -262,8 +276,9 @@ func TestDashboard(t *testing.T) {
 			h,
 		),
 	)(w, req)
-	if w.Body.String() != "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%!;(MISSING) margin: 0 auto;'><h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at 2016-09-16 15:04:05</small><hr><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #777 6%, #333 6%);'><b>Docker/swarmkit</b> #1544 Deliver secrets using assignments by cyli @ 0 days or 16 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #777 6%, #333 6%);'><b>Docker/swarmkit</b> #1543 raft: defer closing conns on applyRemoveNode by LK4D4 @ 0 days or 16 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FFA500 15%, #333 15%);'><b>Docker/swarmkit</b> #1540 Improve error message for removing pre-defined (e.g., `ingress`) network by yongtang @ 1 days or 36 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FFA500 22%, #333 22%);'><b>Docker/swarmkit</b> #1536 add portallocator test by allencloud @ 2 days or 53 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FFA500 28%, #333 28%);'><b>Docker/swarmkit</b> #1530 Make it even more clear where to file bugs by dperny @ 2 days or 69 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 70%, #333 70%);'><b>Docker/swarmkit</b> #1517 Re-enable plugin filter by nishanttotla @ 7 days or 168 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 85%, #333 85%);'><b>Docker/swarmkit</b> #1512 [WIP] Topology-aware scheduling by aaronlehmann @ 8 days or 204 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 86%, #333 86%);'><b>Docker/swarmkit</b> #1511 Secret-specific protos by cyli @ 8 days or 207 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 95%, #333 95%);'><b>Docker/swarmkit</b> #1500 Check for duplicate mount points in ServiceSpec by kunalkushwaha @ 9 days or 228 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1488 judge *api.Task nil and add nodeinfo test by allencloud @ 14 days or 341 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1483 raft: Migrate WAL files to new directory by aaronlehmann @ 14 days or 357 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1476 Change Task Name to `<ServiceAnnotations.Name>.<NodeID>.<TaskID>` in global mode by yongtang @ 16 days or 398 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1473 design: add topology-aware scheduling proposal by aaronlehmann @ 16 days or 404 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1446 Implement HA scheduling by aaronlehmann @ 21 days or 516 hours</div><div style='margin: 3px; padding: 8px; background: linear-gradient( 90deg, #FF4500 100%, #333 100%);'><b>Docker/swarmkit</b> #1433 return all validation error in spec validation by allencloud @ 22 days or 550 hours</div></body></html>" {
-		t.Logf("%s", w.Body.String())
-		t.Fail()
+	f, err := os.Create("e2e.html")
+	if err != nil {
+		panic(err)
 	}
+	fmt.Fprint(f, w.Body.String())
 }
