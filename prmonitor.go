@@ -57,6 +57,10 @@ type Config struct {
 
 	// Repos to pull onto dashboard
 	Repos []Repo
+
+	// optional list of authors - if included, will only display open PRs
+	// by those authors. Useful for filtering large codebases by team.
+	Authors *[]string
 }
 
 // Repo is a single repository that should be monitored and the
@@ -69,10 +73,6 @@ type Repo struct {
 
 	// number of open PRs to look through - can be tuned for each repo.
 	Depth int
-
-	// optional list of authors - if included, will only display open PRs
-	// by those authors.
-	Authors *[]string
 }
 
 // Middlewares
@@ -135,7 +135,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 
 		// serial pipeline
 		go Retrieve(re, p, client)
-		go Filter(p, f, now)
+		go Filter(p, f, now, t.Authors)
 		go Display(f, done, w, now)
 		for _, repo := range t.Repos {
 			re <- repo
@@ -200,29 +200,41 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 }
 
 // Filter reads PRs coming in from github and writes out summaries
-// that can be aggregated and used by Render. I see this function
-// handling author filtering, nil pointers, etc.
-func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time) {
+// that can be aggregated and used by Render. Filters out PRs by
+// author if present and by the time window.
+func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
 	for {
 		v, more := <-in
 		if more {
-			// TODO add back author processing
-			// TODO handle case where PR times after AFTER now.
-			// TODO handle case where PR wouldn't actually be visible
+			ok := false
 			end := now
 			if v.PR.ClosedAt != nil {
 				end = *v.PR.ClosedAt
 			}
-			start := *v.PR.CreatedAt
-			user := *v.PR.User
-			out <- SummarizedPullRequest{
-				Owner:    v.Owner,
-				Repo:     v.Repo,
-				Number:   *v.PR.Number,
-				Title:    *v.PR.Title,
-				Author:   *user.Login,
-				OpenedAt: start,
-				ClosedAt: end,
+			if now.Sub(end) > 240*time.Hour {
+				continue
+			}
+			if authors != nil {
+				for _, a := range *authors {
+					if a == *v.PR.User.Login {
+						ok = true
+					}
+				}
+			} else {
+				ok = true
+			}
+			if ok {
+				start := *v.PR.CreatedAt
+				user := *v.PR.User
+				out <- SummarizedPullRequest{
+					Owner:    v.Owner,
+					Repo:     v.Repo,
+					Number:   *v.PR.Number,
+					Title:    *v.PR.Title,
+					Author:   *user.Login,
+					OpenedAt: start,
+					ClosedAt: end,
+				}
 			}
 		} else {
 			close(out)
