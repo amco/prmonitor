@@ -204,7 +204,7 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest) {
 // Display formats pull requests onto a html page as they
 // come in from the rest of the pipeline.
 func Display(in chan SummarizedPullRequest, done chan bool, w io.Writer, now time.Time) {
-	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='600'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
+	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
 	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
 	for {
 		pr, more := <-in
