@@ -209,6 +209,24 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time) {
 			// TODO add back author processing
 			// TODO handle case where PR times after AFTER now.
 			// TODO handle case where PR wouldn't actually be visible
+
+			// nil pointer checks.
+			if v.PR == nil {
+				continue
+			}
+			if v.PR.Number == nil {
+				continue
+			}
+			if v.PR.Title == nil {
+				continue
+			}
+			if v.PR.User == nil {
+				continue
+			}
+			if v.PR.User.Login == nil {
+				continue
+			}
+
 			end := now
 			if v.PR.ClosedAt != nil {
 				end = *v.PR.ClosedAt
