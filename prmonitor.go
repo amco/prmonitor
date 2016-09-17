@@ -6,8 +6,8 @@ import (
 	"github.com/google/go-github/github"
 	"io"
 	"net/http"
-	"time"
 	"sort"
+	"time"
 )
 
 // Data Structures
@@ -135,7 +135,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 
 		// serial pipeline
 		go Retrieve(re, p, client)
-		go Filter(p, f)
+		go Filter(p, f, now)
 		go Display(f, done, w, now)
 		for _, repo := range t.Repos {
 			re <- repo
@@ -173,6 +173,25 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 					PR:    v,
 				}
 			}
+
+			cp := &github.PullRequestListOptions{}
+			cp.State = "closed"
+			cp.Sort = "updated"
+			cp.Direction = "desc"
+			cp.Page = 0
+			cp.Base = "master"
+			cp.PerPage = r.Depth
+			cprs, _, err := client.PullRequests.List(r.Owner, r.Repo, cp)
+			if err != nil {
+				return
+			}
+			for _, v := range cprs {
+				out <- pipelinePR{
+					Owner: r.Owner,
+					Repo:  r.Repo,
+					PR:    v,
+				}
+			}
 		} else {
 			close(out)
 			return
@@ -183,11 +202,17 @@ func Retrieve(in chan Repo, out chan pipelinePR, client *github.Client) {
 // Filter reads PRs coming in from github and writes out summaries
 // that can be aggregated and used by Render. I see this function
 // handling author filtering, nil pointers, etc.
-func Filter(in chan pipelinePR, out chan SummarizedPullRequest) {
+func Filter(in chan pipelinePR, out chan SummarizedPullRequest, now time.Time) {
 	for {
 		v, more := <-in
 		if more {
 			// TODO add back author processing
+			// TODO handle case where PR times after AFTER now.
+			// TODO handle case where PR wouldn't actually be visible
+			end := now
+			if v.PR.ClosedAt != nil {
+				end = *v.PR.ClosedAt
+			}
 			start := *v.PR.CreatedAt
 			user := *v.PR.User
 			out <- SummarizedPullRequest{
@@ -197,6 +222,7 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest) {
 				Title:    *v.PR.Title,
 				Author:   *user.Login,
 				OpenedAt: start,
+				ClosedAt: end,
 			}
 		} else {
 			close(out)
@@ -232,16 +258,19 @@ func Display(in chan SummarizedPullRequest, done chan bool, w io.Writer, now tim
 	}
 }
 
+// ByDate sorts summarized pull requests by date.
 type ByDate []SummarizedPullRequest
 
-func (a ByDate) Len() int           { return len(a) }
-func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByDate) Less(i, j int) bool { return a[j].ClosedAt.Before(a[i].ClosedAt) }
+// Len returns length of the ByDate array
+func (a ByDate) Len() int { return len(a) }
 
+// Swap exchanges elements in the ByDate array
+func (a ByDate) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
-
-
-// Gantt Chart
-//  1. sort end time
-//  2. subsort by begin time
-//  3. draw 240 hours.
+// Less compares two pull request indices
+func (a ByDate) Less(i, j int) bool {
+	if a[j].ClosedAt.Equal(a[i].ClosedAt) {
+		return a[j].OpenedAt.Before(a[i].OpenedAt)
+	}
+	return a[j].ClosedAt.Before(a[i].ClosedAt)
+}
