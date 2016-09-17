@@ -186,10 +186,20 @@ func TestRender(t *testing.T) {
 		{
 			Owner:    "brentdrich",
 			Repo:     "prmonitor",
+			Number:   2,
+			Title:    "closed pr",
+			Author:   "brentdrich",
+			OpenedAt: now.Add(-72 * time.Hour),
+			ClosedAt: now.Add(-24 * time.Hour),
+		},
+		{
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
 			Number:   4,
 			Title:    "test pr",
 			Author:   "brentdrich",
-			OpenedAt: now.Add(-5 * time.Hour),
+			OpenedAt: now.Add(-1 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -198,6 +208,7 @@ func TestRender(t *testing.T) {
 			Title:    "yellow zone pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-25 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -206,6 +217,7 @@ func TestRender(t *testing.T) {
 			Title:    "red zone pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-73 * time.Hour),
+			ClosedAt: now,
 		},
 		{
 			Owner:    "brentdrich",
@@ -214,6 +226,7 @@ func TestRender(t *testing.T) {
 			Title:    "boundary value pr",
 			Author:   "brentdrich",
 			OpenedAt: now.Add(-1000 * time.Hour),
+			ClosedAt: now,
 		},
 	}
 	f, err := os.Create("tmp.html")

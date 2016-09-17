@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"time"
+	"sort"
 )
 
 // Data Structures
@@ -37,6 +38,9 @@ type SummarizedPullRequest struct {
 
 	// the time the PR was opened.
 	OpenedAt time.Time
+
+	// the time the PR was closed (or the current time).
+	ClosedAt time.Time
 }
 
 // Config contains deserialized configuration file information
@@ -206,28 +210,38 @@ func Filter(in chan pipelinePR, out chan SummarizedPullRequest) {
 func Display(in chan SummarizedPullRequest, done chan bool, w io.Writer, now time.Time) {
 	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
 	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
+	total := (240 * time.Hour).Hours()
+	var prs []SummarizedPullRequest
 	for {
 		pr, more := <-in
 		if more {
-			hours := now.Sub(pr.OpenedAt)
-			n := hours.Hours() / (240 * time.Hour).Hours()
-			if n > 1 {
-				n = 1
-			}
-			stopyellow := (24 * time.Hour).Hours()
-			stopred := (72 * time.Hour).Hours()
-			color := "#777"
-			if hours.Hours() > stopred {
-				color = "#FF4500"
-			} else if hours.Hours() > stopyellow {
-				color = "#FFA500"
-			}
-			style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, %s %d%%, #333 %d%%);`, color, int(n*100), int(n*100))
-			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s @ %d days or %d hours</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author, hours/(24*time.Hour), hours/time.Hour)
+			prs = append(prs, pr)
 		} else {
+			sort.Sort(ByDate(prs))
+			for _, pr := range prs {
+				start := (total - now.Sub(pr.OpenedAt).Hours()) / total
+				end := (total - now.Sub(pr.ClosedAt).Hours()) / total
+				color := "#00cc66"
+				style := fmt.Sprintf(`margin: 3px; padding: 8px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
+				fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
+			}
 			fmt.Fprintf(w, "</body></html>")
 			done <- true
 			return
 		}
 	}
 }
+
+type ByDate []SummarizedPullRequest
+
+func (a ByDate) Len() int           { return len(a) }
+func (a ByDate) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByDate) Less(i, j int) bool { return a[j].ClosedAt.Before(a[i].ClosedAt) }
+
+
+
+
+// Gantt Chart
+//  1. sort end time
+//  2. subsort by begin time
+//  3. draw 240 hours.
