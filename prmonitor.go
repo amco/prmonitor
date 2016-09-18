@@ -123,14 +123,9 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 		}
 
 		re := make(chan Repo)
-		p := make(chan SummarizedPullRequest)
-		f := make(chan SummarizedPullRequest)
-		done := make(chan bool)
 
 		// serial pipeline
-		go Retrieve(re, p, client, now)
-		go Filter(p, f, now, t.Authors)
-		go Display(f, done, w, now)
+		done := Display(FilterByAuthor(FilterByDate(Retrieve(re, client, now), now), t.Authors), w, now)
 		for _, repo := range t.Repos {
 			re <- repo
 		}
@@ -163,105 +158,132 @@ func Transform(v *github.PullRequest, now time.Time) (SummarizedPullRequest, err
 
 // Retrieve pulls in a repository and fetches pull requests that
 // are passed to the next stage in the pipeline.
-func Retrieve(in chan Repo, out chan SummarizedPullRequest, client *github.Client, now time.Time) {
-	for {
-		r, more := <-in
-		if more {
-			op := &github.PullRequestListOptions{}
-			op.State = "open"
-			op.Sort = "created"
-			op.Direction = "desc"
-			op.Page = 0
-			op.Base = "master"
-			op.PerPage = r.Depth
-			oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
-			if err != nil {
-				return
-			}
-			for _, v := range oprs {
-				if p, err := Transform(v, now); err == nil {
-					out <- p
+func Retrieve(in chan Repo, client *github.Client, now time.Time) (chan SummarizedPullRequest) {
+	out := make(chan SummarizedPullRequest)
+	go func() {
+		for {
+			r, more := <-in
+			if more {
+				op := &github.PullRequestListOptions{}
+				op.State = "open"
+				op.Sort = "created"
+				op.Direction = "desc"
+				op.Page = 0
+				op.Base = "master"
+				op.PerPage = r.Depth
+				oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
+				if err != nil {
+					return
 				}
-			}
+				for _, v := range oprs {
+					if p, err := Transform(v, now); err == nil {
+						out <- p
+					}
+				}
 
-			cp := &github.PullRequestListOptions{}
-			cp.State = "closed"
-			cp.Sort = "updated"
-			cp.Direction = "desc"
-			cp.Page = 0
-			cp.Base = "master"
-			cp.PerPage = r.Depth
-			cprs, _, err := client.PullRequests.List(r.Owner, r.Repo, cp)
-			if err != nil {
+				cp := &github.PullRequestListOptions{}
+				cp.State = "closed"
+				cp.Sort = "updated"
+				cp.Direction = "desc"
+				cp.Page = 0
+				cp.Base = "master"
+				cp.PerPage = r.Depth
+				cprs, _, err := client.PullRequests.List(r.Owner, r.Repo, cp)
+				if err != nil {
+					return
+				}
+				for _, v := range cprs {
+					if p, err := Transform(v, now); err == nil {
+						out <- p
+					}
+				}
+			} else {
+				close(out)
 				return
 			}
-			for _, v := range cprs {
-				if p, err := Transform(v, now); err == nil {
-					out <- p
-				}
-			}
-		} else {
-			close(out)
-			return
 		}
-	}
+	}()
+	return out
 }
+
+
+// FilterByDate drops Summarized Pull Requests that were closed more
+// than 10 days ago.
+func FilterByDate(in <-chan SummarizedPullRequest, now time.Time) (<-chan SummarizedPullRequest) {
+	out := make(chan SummarizedPullRequest)
+	go func() {
+		for {
+			v, more := <-in
+			if more {
+				if now.Sub(v.ClosedAt) < 240 * time.Hour {
+					out <- v
+				}
+			} else {
+				close(out)
+				return
+			}
+		}
+	}()
+	return out
+}
+
 
 // Filter reads PRs coming in from github and writes out summaries
 // that can be aggregated and used by Render. Filters out PRs by
 // author if present and by the time window.
-func Filter(in chan SummarizedPullRequest, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
-	for {
-		v, more := <-in
-		if more {
-			ok := false
-			if now.Sub(v.ClosedAt) > 240*time.Hour {
-				continue
-			}
-			if authors != nil {
-				for _, a := range *authors {
-					if a == v.Author {
-						ok = true
+func FilterByAuthor(in <-chan SummarizedPullRequest, authors *[]string) (<-chan SummarizedPullRequest) {
+	out := make(chan SummarizedPullRequest)
+	go func() {
+		for {
+			v, more := <-in
+			if more {
+				if authors != nil {
+					for _, a := range *authors {
+						if a == v.Author {
+							out <- v
+							continue
+						}
 					}
 				}
 			} else {
-				ok = true
+				close(out)
+				return
 			}
-			if ok {
-				out <- v
-			}
-		} else {
-			close(out)
-			return
 		}
-	}
+	}()
+	return out
 }
 
 // Display formats pull requests onto a html page as they
 // come in from the rest of the pipeline.
-func Display(in chan SummarizedPullRequest, done chan bool, w io.Writer, now time.Time) {
-	fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
-	fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
-	total := (240 * time.Hour).Hours()
-	var prs []SummarizedPullRequest
-	for {
-		pr, more := <-in
-		if more {
-			prs = append(prs, pr)
-		} else {
-			sort.Sort(ByDate(prs))
-			for _, pr := range prs {
-				start := (total - now.Sub(pr.OpenedAt).Hours()) / total
-				end := (total - now.Sub(pr.ClosedAt).Hours()) / total
-				color := "#00cc66"
-				style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
-				fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
+func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) (<-chan bool) {
+	out := make(chan bool)
+	go func() {
+		fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
+		fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
+		total := (240 * time.Hour).Hours()
+		var prs []SummarizedPullRequest
+		for {
+			pr, more := <-in
+			if more {
+				prs = append(prs, pr)
+			} else {
+				sort.Sort(ByDate(prs))
+				for _, pr := range prs {
+					start := (total - now.Sub(pr.OpenedAt).Hours()) / total
+					end := (total - now.Sub(pr.ClosedAt).Hours()) / total
+					color := "#00cc66"
+					style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start * 100, color, start * 100, color, end * 100, end * 100)
+					fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
+				}
+				fmt.Fprintf(w, "</body></html>")
+				out <- true
+				close(out)
+				return
 			}
-			fmt.Fprintf(w, "</body></html>")
-			done <- true
-			return
 		}
-	}
+	}()
+	return out
 }
 
 // ByDate sorts summarized pull requests by date.
