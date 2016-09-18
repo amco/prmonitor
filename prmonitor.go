@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"sort"
 	"time"
+	"sync"
 )
 
 // Data Structures
@@ -122,16 +123,27 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 			panic(err)
 		}
 
-		re := make(chan Repo)
+		opened := make(chan Repo)
+		closed := make(chan Repo)
 
-		// serial pipeline
-		done := Display(FilterByAuthor(FilterByDate(Retrieve(re, client, now), now), t.Authors), w, now)
+		// construct pipeline
+		done := Display(
+			FilterByAuthor(
+				FilterByDate(
+					merge(
+						Retrieve(opened, client, now, "open", "created"),
+						Retrieve(closed, client, now, "closed", "updated"),
+					), now),
+				t.Authors),
+			w, now)
+
 		for _, repo := range t.Repos {
-			re <- repo
+			opened <- repo
+			closed <- repo
 		}
-		close(re)
+		close(opened)
+		close(closed)
 
-		// wait to respond until dashboard is rendered
 		<-done
 	}
 }
@@ -156,17 +168,37 @@ func Transform(v *github.PullRequest, now time.Time) (SummarizedPullRequest, err
 	}, nil
 }
 
+func merge(cs ...<-chan SummarizedPullRequest) <-chan SummarizedPullRequest {
+	var wg sync.WaitGroup
+	out := make(chan SummarizedPullRequest)
+	output := func(c <-chan SummarizedPullRequest) {
+		for n := range c {
+			out <- n
+		}
+		wg.Done()
+	}
+	wg.Add(len(cs))
+	for _, c := range cs {
+		go output(c)
+	}
+	go func() {
+		wg.Wait()
+		close(out)
+	}()
+	return out
+}
+
 // Retrieve pulls in a repository and fetches pull requests that
 // are passed to the next stage in the pipeline.
-func Retrieve(in chan Repo, client *github.Client, now time.Time) (chan SummarizedPullRequest) {
+func Retrieve(in chan Repo, client *github.Client, now time.Time, state string, sort string) (<-chan SummarizedPullRequest) {
 	out := make(chan SummarizedPullRequest)
 	go func() {
 		for {
 			r, more := <-in
 			if more {
 				op := &github.PullRequestListOptions{}
-				op.State = "open"
-				op.Sort = "created"
+				op.State = state
+				op.Sort = sort
 				op.Direction = "desc"
 				op.Page = 0
 				op.Base = "master"
@@ -176,23 +208,6 @@ func Retrieve(in chan Repo, client *github.Client, now time.Time) (chan Summariz
 					return
 				}
 				for _, v := range oprs {
-					if p, err := Transform(v, now); err == nil {
-						out <- p
-					}
-				}
-
-				cp := &github.PullRequestListOptions{}
-				cp.State = "closed"
-				cp.Sort = "updated"
-				cp.Direction = "desc"
-				cp.Page = 0
-				cp.Base = "master"
-				cp.PerPage = r.Depth
-				cprs, _, err := client.PullRequests.List(r.Owner, r.Repo, cp)
-				if err != nil {
-					return
-				}
-				for _, v := range cprs {
 					if p, err := Transform(v, now); err == nil {
 						out <- p
 					}
