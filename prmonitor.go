@@ -123,12 +123,12 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 		}
 
 		re := make(chan Repo)
-		p := make(chan *github.PullRequest)
+		p := make(chan SummarizedPullRequest)
 		f := make(chan SummarizedPullRequest)
 		done := make(chan bool)
 
 		// serial pipeline
-		go Retrieve(re, p, client)
+		go Retrieve(re, p, client, now)
 		go Filter(p, f, now, t.Authors)
 		go Display(f, done, w, now)
 		for _, repo := range t.Repos {
@@ -143,9 +143,27 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 
 // Data processing pipeline...
 
+// Transform converts a github pull request into a pointer-free summary
+// that can be used by the rest of the pipeline.
+func Transform(v *github.PullRequest, now time.Time) (SummarizedPullRequest, error) {
+	closedAt := now
+	if v.ClosedAt != nil {
+		closedAt = *v.ClosedAt
+	}
+	return SummarizedPullRequest{
+		Owner:    *v.Base.Repo.Owner.Login,
+		Repo:     *v.Base.Repo.Name,
+		Number:   *v.Number,
+		Title:    *v.Title,
+		Author:   *v.User.Login,
+		OpenedAt: *v.CreatedAt,
+		ClosedAt: closedAt,
+	}, nil
+}
+
 // Retrieve pulls in a repository and fetches pull requests that
 // are passed to the next stage in the pipeline.
-func Retrieve(in chan Repo, out chan *github.PullRequest, client *github.Client) {
+func Retrieve(in chan Repo, out chan SummarizedPullRequest, client *github.Client, now time.Time) {
 	for {
 		r, more := <-in
 		if more {
@@ -161,7 +179,9 @@ func Retrieve(in chan Repo, out chan *github.PullRequest, client *github.Client)
 				return
 			}
 			for _, v := range oprs {
-				out <- v
+				if p, err := Transform(v, now); err == nil {
+					out <- p
+				}
 			}
 
 			cp := &github.PullRequestListOptions{}
@@ -176,7 +196,9 @@ func Retrieve(in chan Repo, out chan *github.PullRequest, client *github.Client)
 				return
 			}
 			for _, v := range cprs {
-				out <- v
+				if p, err := Transform(v, now); err == nil {
+					out <- p
+				}
 			}
 		} else {
 			close(out)
@@ -188,21 +210,17 @@ func Retrieve(in chan Repo, out chan *github.PullRequest, client *github.Client)
 // Filter reads PRs coming in from github and writes out summaries
 // that can be aggregated and used by Render. Filters out PRs by
 // author if present and by the time window.
-func Filter(in chan *github.PullRequest, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
+func Filter(in chan SummarizedPullRequest, out chan SummarizedPullRequest, now time.Time, authors *[]string) {
 	for {
 		v, more := <-in
 		if more {
 			ok := false
-			end := now
-			if v.ClosedAt != nil {
-				end = *v.ClosedAt
-			}
-			if now.Sub(end) > 240*time.Hour {
+			if now.Sub(v.ClosedAt) > 240*time.Hour {
 				continue
 			}
 			if authors != nil {
 				for _, a := range *authors {
-					if a == *v.User.Login {
+					if a == v.Author {
 						ok = true
 					}
 				}
@@ -210,17 +228,7 @@ func Filter(in chan *github.PullRequest, out chan SummarizedPullRequest, now tim
 				ok = true
 			}
 			if ok {
-				start := *v.CreatedAt
-				user := *v.User
-				out <- SummarizedPullRequest{
-					Owner:    *v.Base.Repo.Owner.Login,
-					Repo:     *v.Base.Repo.Name,
-					Number:   *v.Number,
-					Title:    *v.Title,
-					Author:   *user.Login,
-					OpenedAt: start,
-					ClosedAt: end,
-				}
+				out <- v
 			}
 		} else {
 			close(out)
