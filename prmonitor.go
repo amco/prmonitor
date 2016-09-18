@@ -7,8 +7,8 @@ import (
 	"io"
 	"net/http"
 	"sort"
-	"time"
 	"sync"
+	"time"
 )
 
 // Data Structures
@@ -190,113 +190,94 @@ func merge(cs ...<-chan SummarizedPullRequest) <-chan SummarizedPullRequest {
 
 // Retrieve pulls in a repository and fetches pull requests that
 // are passed to the next stage in the pipeline.
-func Retrieve(in chan Repo, client *github.Client, now time.Time, state string, sort string) (<-chan SummarizedPullRequest) {
+func Retrieve(in chan Repo, client *github.Client, now time.Time, state string, sort string) <-chan SummarizedPullRequest {
 	out := make(chan SummarizedPullRequest)
 	go func() {
-		for {
-			r, more := <-in
-			if more {
-				op := &github.PullRequestListOptions{}
-				op.State = state
-				op.Sort = sort
-				op.Direction = "desc"
-				op.Page = 0
-				op.Base = "master"
-				op.PerPage = r.Depth
-				oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
-				if err != nil {
-					return
-				}
-				for _, v := range oprs {
-					if p, err := Transform(v, now); err == nil {
-						out <- p
-					}
-				}
-			} else {
-				close(out)
+		for r := range in {
+			op := &github.PullRequestListOptions{}
+			op.State = state
+			op.Sort = sort
+			op.Direction = "desc"
+			op.Page = 0
+			op.Base = "master"
+			op.PerPage = r.Depth
+			oprs, _, err := client.PullRequests.List(r.Owner, r.Repo, op)
+			if err != nil {
 				return
 			}
+			for _, v := range oprs {
+				if p, err := Transform(v, now); err == nil {
+					out <- p
+				}
+			}
 		}
+		close(out)
 	}()
 	return out
 }
-
 
 // FilterByDate drops Summarized Pull Requests that were closed more
 // than 10 days ago.
-func FilterByDate(in <-chan SummarizedPullRequest, now time.Time) (<-chan SummarizedPullRequest) {
+func FilterByDate(in <-chan SummarizedPullRequest, now time.Time) <-chan SummarizedPullRequest {
 	out := make(chan SummarizedPullRequest)
 	go func() {
-		for {
-			v, more := <-in
-			if more {
-				if now.Sub(v.ClosedAt) < 240 * time.Hour {
-					out <- v
-				}
-			} else {
-				close(out)
-				return
+		for v := range in {
+			if now.Sub(v.ClosedAt) < 240*time.Hour {
+				out <- v
 			}
 		}
+		close(out)
+
 	}()
 	return out
 }
 
-
-// Filter reads PRs coming in from github and writes out summaries
-// that can be aggregated and used by Render. Filters out PRs by
-// author if present and by the time window.
-func FilterByAuthor(in <-chan SummarizedPullRequest, authors *[]string) (<-chan SummarizedPullRequest) {
+// FilterByAuthor drops SummarizedPullRequests that don't belong to
+// a team member (provided the array exists)
+func FilterByAuthor(in <-chan SummarizedPullRequest, authors *[]string) <-chan SummarizedPullRequest {
 	out := make(chan SummarizedPullRequest)
 	go func() {
-		for {
-			v, more := <-in
-			if more {
-				if authors != nil {
-					for _, a := range *authors {
-						if a == v.Author {
-							out <- v
-							continue
-						}
+		for v := range in {
+			if authors != nil {
+				for _, a := range *authors {
+					if a == v.Author {
+						out <- v
+						continue
 					}
 				}
 			} else {
-				close(out)
-				return
+				out <- v
 			}
+
 		}
+		close(out)
 	}()
 	return out
 }
 
 // Display formats pull requests onto a html page as they
 // come in from the rest of the pipeline.
-func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) (<-chan bool) {
+func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan bool {
 	out := make(chan bool)
 	go func() {
 		fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
 		fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
 		total := (240 * time.Hour).Hours()
 		var prs []SummarizedPullRequest
-		for {
-			pr, more := <-in
-			if more {
-				prs = append(prs, pr)
-			} else {
-				sort.Sort(ByDate(prs))
-				for _, pr := range prs {
-					start := (total - now.Sub(pr.OpenedAt).Hours()) / total
-					end := (total - now.Sub(pr.ClosedAt).Hours()) / total
-					color := "#00cc66"
-					style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start * 100, color, start * 100, color, end * 100, end * 100)
-					fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
-				}
-				fmt.Fprintf(w, "</body></html>")
-				out <- true
-				close(out)
-				return
-			}
+		for pr := range in {
+			prs = append(prs, pr)
 		}
+		sort.Sort(ByDate(prs))
+		for _, pr := range prs {
+			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
+			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
+			color := "#00cc66"
+			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
+			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
+		}
+		fmt.Fprintf(w, "</body></html>")
+		out <- true
+		close(out)
 	}()
 	return out
 }
