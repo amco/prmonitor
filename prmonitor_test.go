@@ -236,8 +236,7 @@ func TestRender(t *testing.T) {
 	}
 	defer f.Close()
 	c := make(chan SummarizedPullRequest)
-	d := make(chan bool)
-	go Display(c, d, f, now)
+	d := Display(c, f, now)
 	for _, pr := range prs {
 		c <- pr
 	}
