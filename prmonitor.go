@@ -261,7 +261,15 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan
 	out := make(chan bool)
 	go func() {
 		fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
-		fmt.Fprintf(w, "<h1 style='color: #FFF; padding: 0; margin: 0;'>Outstanding Pull Requests</h1><small style='color: #FFF'>last refreshed at %s</small><hr>", now.Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(w, "<h1>Recent Pull Requests</h1>")
+		fmt.Fprintf(w, "<div style='background-image: linear-gradient(90deg, #999 0%%, #999 1%%, transparent 1%%); background-size: 10%% 100%%; background-repeat: repeat-x;'>")
+		for i := 10; i > 0; i-- {
+			if i == 1 {
+				fmt.Fprintf(w, "<div style='color: #999; width: 10%%; display: inline-block; text-align: center;'>today</div>")
+			} else {
+				fmt.Fprintf(w, "<div style='color: #999; width: 10%%; display: inline-block; text-align: center;'>%d days ago</div>", i)
+			}
+		}
 		total := (240 * time.Hour).Hours()
 		var prs []SummarizedPullRequest
 		for pr := range in {
@@ -272,9 +280,10 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan
 			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
 			color := "#00cc66"
-			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, #333 0%%, #333 %.6f%%, %s %.6f%%, %s %.6f%%, #333 %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
+			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, transparent 0%%, transparent %.6f%%, %s %.6f%%, %s %.6f%%, transparent %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
 			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
 		}
+		fmt.Fprintf(w, "</div>")
 		fmt.Fprintf(w, "</body></html>")
 		out <- true
 		close(out)
