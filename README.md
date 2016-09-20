@@ -1,7 +1,10 @@
 # prmonitor
 
 **prmonitor** is a dedicated dashboard that monitors pull requests
-for a team across multiple repositories.
+for a team across multiple repositories. Pull requests are displayed
+on a [Gantt Chart](https://en.wikipedia.org/wiki/Gantt_chart) running
+left to right from past to present, with bar length as review duration
+and bar position as the review time.
 
 ![Example](/example.png)
 
