@@ -38,17 +38,17 @@ type SummarizedPullRequest struct {
 	ClosedAt time.Time
 }
 
-// Config contains deserialized configuration file information
-// that tells the prmonitor which repos to monitor and which
+// Config contains information on which repos to monitor and which
 // credentials to use when accessing github.
 type Config struct {
 	// Dashboard user
-	DashboardUser string `json:"dashboard_user"`
-	DashboardPass string `json:"dashboard_pass"`
+	DashboardUser string
+	DashboardPass string
 
 	// Github API user
-	GithubUser string `json:"github_user"`
-	GithubPass string `json:"github_pass"`
+	GithubUser  string
+	GithubPass  string
+	GithubToken string
 
 	// Repos to pull onto dashboard
 	Repos []Repo

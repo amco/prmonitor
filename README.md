@@ -2,8 +2,8 @@
 
 **prmonitor** is a dedicated dashboard that monitors pull requests
 for a team across multiple repositories. Pull requests are displayed
-on a [Gantt Chart](https://en.wikipedia.org/wiki/Gantt_chart) running
-left to right from past to present, with bar length as review duration
+on a reverse [Gantt Chart](https://en.wikipedia.org/wiki/Gantt_chart) running
+from present (right) to past (left), with bar length as review duration
 and bar position as the review time.
 
 ![Example](/example.png)
@@ -48,11 +48,15 @@ Deploying prmonitor to heroku requires that the vendor directory is included in
 the repository. `deploy.sh` is a script that creates a new branch that includes the
 vendor directory (so master doesn't have to) and pushes it out to heroku automatically.
 
- 1. Set up a heroku app and define a [CONFIG variable](https://devcenter.heroku.com/articles/config-vars)
-
- 2. Set up [heroku-cli](https://devcenter.heroku.com/articles/deploying-go)
-
- 3. Run the deployment script
+* Set up a heroku app and define [environment variables](https://devcenter.heroku.com/articles/config-vars). Examples:
+  * CONFIG={"repos": [{"owner": "brentdrich", "repo": "prmonitor"}]}
+  * SSL_HOST=myapp.herokuapp.com
+  * PORT=8081
+  * DASHBOARD_USER=admin
+  * DASHBOARD_PASSWORD=admin
+  * GITHUB_TOKEN=xxx
+* Set up [heroku-cli](https://devcenter.heroku.com/articles/deploying-go)
+* Run the deployment script
     ```
     deploy.sh
     ```

@@ -7,12 +7,36 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/dnaeon/go-vcr/cassette",
+			"Rev": "9d71b8a6df86e00127f96bc8dabc09856ab8afdb"
+		},
+		{
+			"ImportPath": "github.com/dnaeon/go-vcr/recorder",
+			"Rev": "9d71b8a6df86e00127f96bc8dabc09856ab8afdb"
+		},
+		{
 			"ImportPath": "github.com/google/go-github/github",
 			"Rev": "6d1b527d46849e8fc9238298ebe86dced178609c"
 		},
 		{
 			"ImportPath": "github.com/google/go-querystring/query",
 			"Rev": "9235644dd9e52eeae6fa48efd539fdc351a0af53"
+		},
+		{
+			"ImportPath": "golang.org/x/net/context",
+			"Rev": "f09c4662a0bd6bd8943ac7b4931e185df9471da4"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "3c3a985cb79f52a3190fbc056984415ca6763d01"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/internal",
+			"Rev": "3c3a985cb79f52a3190fbc056984415ca6763d01"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "31c299268d302dd0aa9a0dcf765a3d58971ac83f"
 		}
 	]
 }
