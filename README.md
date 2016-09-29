@@ -50,7 +50,7 @@ vendor directory (so master doesn't have to) and pushes it out to heroku automat
 
 * Set up a heroku app and define [environment variables](https://devcenter.heroku.com/articles/config-vars). Examples:
   * CONFIG={"repos": [{"owner": "brentdrich", "repo": "prmonitor"}]}
-  * SSL_HOST=myapp.herokuapp.com
+  * SSLHOST=myapp.herokuapp.com
   * PORT=8081
   * DASHBOARD_USER=admin
   * DASHBOARD_PASSWORD=admin

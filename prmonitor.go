@@ -38,6 +38,9 @@ type SummarizedPullRequest struct {
 	ClosedAt time.Time
 }
 
+// SummarizedPullRequests is a slice of SummarizedPullRequest
+type SummarizedPullRequests []SummarizedPullRequest
+
 // Config contains information on which repos to monitor and which
 // credentials to use when accessing github.
 type Config struct {
@@ -56,6 +59,9 @@ type Config struct {
 	// optional list of authors - if included, will only display open PRs
 	// by those authors. Useful for filtering large codebases by team.
 	Authors *[]string
+
+	// How to sort the dashboard
+	Sort SortBy
 }
 
 // Repo is a single repository that should be monitored and the
@@ -69,6 +75,10 @@ type Repo struct {
 	// number of open PRs to look through - can be tuned for each repo.
 	Depth int
 }
+
+// SortBy describes how the user wants to sort SummarizedPullRequests on the
+// dashboard. Supported values are "date", "repo".
+type SortBy string
 
 // Middlewares
 
@@ -135,7 +145,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 						Retrieve(closed, client, now, "closed", "updated"),
 					), now),
 				t.Authors),
-			w, now)
+			w, now, t.Sort)
 
 		for _, repo := range t.Repos {
 			opened <- repo
@@ -257,7 +267,7 @@ func FilterByAuthor(in <-chan SummarizedPullRequest, authors *[]string) <-chan S
 
 // Display formats pull requests onto a html page as they
 // come in from the rest of the pipeline.
-func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan bool {
+func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy SortBy) <-chan bool {
 	out := make(chan bool)
 	go func() {
 		fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
@@ -271,11 +281,19 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan
 			}
 		}
 		total := (240 * time.Hour).Hours()
-		var prs []SummarizedPullRequest
+		var prs SummarizedPullRequests
 		for pr := range in {
 			prs = append(prs, pr)
 		}
-		sort.Sort(ByDate(prs))
+
+		switch sortBy {
+		case "repo":
+			sort.Sort(ByRepo{prs})
+		case "date":
+		default:
+			sort.Sort(ByDate{prs})
+		}
+
 		for _, pr := range prs {
 			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
@@ -291,19 +309,38 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time) <-chan
 	return out
 }
 
-// ByDate sorts summarized pull requests by date.
-type ByDate []SummarizedPullRequest
-
 // Len returns length of the ByDate array
-func (a ByDate) Len() int { return len(a) }
+func (a SummarizedPullRequests) Len() int { return len(a) }
 
 // Swap exchanges elements in the ByDate array
-func (a ByDate) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a SummarizedPullRequests) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
+// ByDate sorts summarized pull requests by date.
+type ByDate struct{ SummarizedPullRequests }
 
 // Less compares two pull request indices
 func (a ByDate) Less(i, j int) bool {
-	if a[j].ClosedAt.Equal(a[i].ClosedAt) {
-		return a[j].OpenedAt.Before(a[i].OpenedAt)
+	if a.SummarizedPullRequests[j].ClosedAt.Equal(a.SummarizedPullRequests[i].ClosedAt) {
+		return a.SummarizedPullRequests[j].OpenedAt.Before(a.SummarizedPullRequests[i].OpenedAt)
 	}
-	return a[j].ClosedAt.Before(a[i].ClosedAt)
+	return a.SummarizedPullRequests[j].ClosedAt.Before(a.SummarizedPullRequests[i].ClosedAt)
+}
+
+// ByRepo sorts summarized pull requests by repository.
+type ByRepo struct{ SummarizedPullRequests }
+
+// Less compares two pull request indices
+func (a ByRepo) Less(i, j int) bool {
+	pri := a.SummarizedPullRequests[i]
+	prj := a.SummarizedPullRequests[j]
+	priRepo := fmt.Sprintf("%s/%s", pri.Owner, pri.Repo)
+	prjRepo := fmt.Sprintf("%s/%s", prj.Owner, prj.Repo)
+
+	if priRepo == prjRepo {
+		if prj.ClosedAt.Equal(pri.ClosedAt) {
+			return prj.OpenedAt.Before(pri.OpenedAt)
+		}
+		return prj.ClosedAt.Before(pri.ClosedAt)
+	}
+	return priRepo < prjRepo
 }
