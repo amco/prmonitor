@@ -2,3 +2,4 @@ config.yaml
 vendor/**/
 tmp.html
 e2e.html
+docker-compose.yml
