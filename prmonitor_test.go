@@ -236,7 +236,7 @@ func TestRender(t *testing.T) {
 	}
 	defer f.Close()
 	c := make(chan SummarizedPullRequest)
-	d := Display(c, f, now)
+	d := Display(c, f, now, SortBy("date"))
 	for _, pr := range prs {
 		c <- pr
 	}
