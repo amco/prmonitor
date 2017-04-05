@@ -4,7 +4,7 @@ go:
   - 1.7
 
 install:
-  - go get github.com/brentdrich/prmonitor/cmd/prmonitor
+  - go get -d github.com/brentdrich/prmonitor/cmd/prmonitor
   - go get github.com/dnaeon/go-vcr/recorder
   - go get github.com/tools/godep
   - go get -u github.com/tsenart/deadcode
