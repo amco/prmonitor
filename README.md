@@ -35,6 +35,11 @@ Features:
     go get github.com/brentdrich/prmonitor
     godep go install
     ```
+    
+    If the above fails due to missing deps, please run:
+    ```
+    godep restore
+    ```
 
 ## Development
 The easiest way to hack on the dashboard is to run:

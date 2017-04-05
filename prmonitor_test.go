@@ -229,6 +229,15 @@ func TestRender(t *testing.T) {
 			OpenedAt: now.Add(-1000 * time.Hour),
 			ClosedAt: now,
 		},
+		{
+			Owner: 	   "brentdrich",
+			Repo:	   "prmonitor",
+			Number:	   8,
+			Title:     "green zone pr closed days ago",
+			Author:    "ziaddabdo",
+			OpenedAt:  now.Add(-72 * time.Hour),
+			ClosedAt:  now.Add(-64 * time.Hour),
+		},
 	}
 	f, err := os.Create("tmp.html")
 	if err != nil {
@@ -242,6 +251,43 @@ func TestRender(t *testing.T) {
 	}
 	close(c)
 	<-d
+}
+
+// Make sure that getColor is comparing time properly
+func TestGetColor(t *testing.T) {
+	now := time.Now()
+	onePr := SummarizedPullRequest{
+			Owner:    "brentdrich",
+			Repo:     "prmonitor",
+			Number:   2,
+			Title:    "closed pr",
+			Author:   "brentdrich",
+			OpenedAt: now.Add(-72 * time.Hour),
+			ClosedAt: now.Add(-24 * time.Hour),
+		}
+	openedFor := now.Sub(onePr.OpenedAt).Hours()
+	res := getColor(openedFor)
+	if res!= "#cc0000" {
+		fmt.Sprintf("Expected to get #cc0000, but got %s", res)
+		return
+	}
+
+	twoPr := SummarizedPullRequest{
+		Owner:    "brentdrich",
+		Repo:     "prmonitor",
+		Number:   2,
+		Title:    "closed pr",
+		Author:   "brentdrich",
+		OpenedAt: now.Add(-10 * time.Hour),
+		ClosedAt: now.Add(-24 * time.Hour),
+	}
+
+	openedFor = now.Sub(twoPr.OpenedAt).Hours()
+	res = getColor(openedFor)
+	if res!= "#00cc66" {
+		fmt.Sprintf("Expected to get #00cc66, but got %s", res)
+		return
+	}
 }
 
 // Dashboard Tests - outputs a rendered dashboard from cached or real data.

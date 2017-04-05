@@ -297,7 +297,7 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 		for _, pr := range prs {
 			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
-			color := "#00cc66"
+			color := getColor(now.Sub(pr.OpenedAt).Hours() - now.Sub(pr.ClosedAt).Hours())
 			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, transparent 0%%, transparent %.6f%%, %s %.6f%%, %s %.6f%%, transparent %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
 			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
 		}
@@ -309,6 +309,15 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 	return out
 }
 
+
+// Chose a red color for pr's which have been open for
+// longer than a day. TODO: make this configurable with file
+func getColor(openedFor float64) string {
+	if openedFor > 24.0 {
+		return "#cc0000"
+	}
+	return "#00cc66"
+}
 // Len returns length of the ByDate array
 func (a SummarizedPullRequests) Len() int { return len(a) }
 
