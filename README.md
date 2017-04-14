@@ -67,3 +67,9 @@ vendor directory (so master doesn't have to) and pushes it out to heroku automat
     ```
 
 The dashboard can be run on a free hobby dyno and refreshes once every 24 hours.
+
+## Customized ranges and colors
+    # Open the customizations.go file
+    # Add values for passive time and color, and warning time and color, and alert color
+    # This will simply change at what points the bars change color based on how frequently
+        they've been reviewed.

@@ -309,14 +309,14 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 	return out
 }
 
-
-// Chose a red color for pr's which have been open for
-// longer than a day. TODO: make this configurable with file
 func getColor(openedFor float64) string {
-	if openedFor > 24.0 {
-		return "#cc0000"
+	customs := getCustomizations()
+	if openedFor < customs.passiveTime {
+		return customs.passiveColor
+	} else if openedFor < customs.warningTime {
+		return customs.warningColor
 	}
-	return "#00cc66"
+	return customs.alertColor
 }
 // Len returns length of the ByDate array
 func (a SummarizedPullRequests) Len() int { return len(a) }

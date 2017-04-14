@@ -234,7 +234,7 @@ func TestRender(t *testing.T) {
 			Repo:	   "prmonitor",
 			Number:	   8,
 			Title:     "green zone pr closed days ago",
-			Author:    "ziaddabdo",
+			Author:    "brentdrich",
 			OpenedAt:  now.Add(-72 * time.Hour),
 			ClosedAt:  now.Add(-64 * time.Hour),
 		},
