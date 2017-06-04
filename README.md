@@ -35,7 +35,7 @@ Features:
     go get github.com/brentdrich/prmonitor
     godep go install
     ```
-    
+
     If the above fails due to missing deps, please run:
     ```
     godep restore
@@ -54,7 +54,11 @@ the repository. `deploy.sh` is a script that creates a new branch that includes 
 vendor directory (so master doesn't have to) and pushes it out to heroku automatically.
 
 * Set up a heroku app and define [environment variables](https://devcenter.heroku.com/articles/config-vars). Examples:
-  * CONFIG={"repos": [{"owner": "brentdrich", "repo": "prmonitor"}]}
+  * CONFIG={"repos": [{"owner": "brentdrich", "repo": "prmonitor"}],
+            "customization": {"passiveColor": "#00cc66", "warningColor": "#ffff00",
+                              "alertColor":   "#cc0000", "passiveTime":  24.0,
+                              "warningTime":  48 }
+            }
   * SSLHOST=myapp.herokuapp.com
   * PORT=8081
   * DASHBOARD_USER=admin
@@ -69,7 +73,7 @@ vendor directory (so master doesn't have to) and pushes it out to heroku automat
 The dashboard can be run on a free hobby dyno and refreshes once every 24 hours.
 
 ## Customized ranges and colors
-    # Open the customizations.go file
+    # Add customizations to the CONFIG env value as shown in the example for settingup heroku.
     # Add values for passive time and color, and warning time and color, and alert color
-    # This will simply change at what points the bars change color based on how frequently
-        they've been reviewed.
+    # This will simply change at what points the bars change color based on how quickly they
+        are closed.

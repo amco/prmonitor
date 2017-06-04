@@ -41,6 +41,23 @@ func main() {
 		client = github.NewClient(tc)
 	}
 
-	http.HandleFunc("/", prmonitor.SSLRequired(os.Getenv("SSLHOST"), prmonitor.BasicAuth(t.DashboardUser, t.DashboardPass, prmonitor.Timestamp(prmonitor.Dashboard(t, client)))))
+	defaultCustom := prmonitor.GetCustomizations()
+	if t.Customization.PassiveColor == "" {
+		t.Customization.PassiveColor = defaultCustom.PassiveColor
+	}
+	if t.Customization.WarningColor == "" {
+		t.Customization.WarningColor = defaultCustom.WarningColor
+	}
+	if t.Customization.AlertColor == "" {
+		t.Customization.AlertColor = defaultCustom.AlertColor
+	}
+	if t.Customization.PassiveTime == 0 {
+		t.Customization.PassiveTime = defaultCustom.PassiveTime
+	}
+	if t.Customization.WarningTime == 0 {
+		t.Customization.WarningTime = defaultCustom.WarningTime
+	}
+
+	http.HandleFunc("/", prmonitor.BasicAuth(t.DashboardUser, t.DashboardPass, prmonitor.Timestamp(prmonitor.Dashboard(t, client))))
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
 }
