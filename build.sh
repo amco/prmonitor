@@ -4,8 +4,8 @@ set -e
 gofmt -l -w .
 test -z "$(gofmt -s -d .)"
 
-# fetch vendor dep?
-godep update ./...
+# install dependencies based on Godeps.json versions
+godep restore
 
 
 # will it build?

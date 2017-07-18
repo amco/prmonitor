@@ -36,6 +36,9 @@ type SummarizedPullRequest struct {
 
 	// the time the PR was closed (or the current time).
 	ClosedAt time.Time
+
+	// Current state of the pr: Either open, closed, or all to filter by state. Default: open
+	State string
 }
 
 // SummarizedPullRequests is a slice of SummarizedPullRequest
@@ -62,6 +65,9 @@ type Config struct {
 
 	// How to sort the dashboard
 	Sort SortBy
+
+	// Color customizations for display
+	Customization Customization
 }
 
 // Repo is a single repository that should be monitored and the
@@ -74,6 +80,28 @@ type Repo struct {
 
 	// number of open PRs to look through - can be tuned for each repo.
 	Depth int
+}
+
+// GetCustomizations is the easy way to get default customizations
+func GetCustomizations() Customization {
+	return Customization{
+		PassiveColor: "#00cc66",
+		WarningColor: "#ffff00",
+		AlertColor:   "#cc0000",
+		ClosedColor: "#999",
+		PassiveTime:  24.0,
+		WarningTime:  48,
+	}
+}
+
+// Customization gives users the ability to customize the colors on their pr monitor display
+type Customization struct {
+	PassiveColor string  // #00cc66"
+	WarningColor string  // #ffff00
+	AlertColor   string  // #cc0000
+	ClosedColor  string  // #999
+	PassiveTime  float64 // 24.0
+	WarningTime  float64 // 48
 }
 
 // SortBy describes how the user wants to sort SummarizedPullRequests on the
@@ -145,7 +173,7 @@ func Dashboard(t Config, client *github.Client) http.HandlerFunc {
 						Retrieve(closed, client, now, "closed", "updated"),
 					), now),
 				t.Authors),
-			w, now, t.Sort)
+			w, now, t.Sort, t)
 
 		for _, repo := range t.Repos {
 			opened <- repo
@@ -175,6 +203,7 @@ func Transform(v *github.PullRequest, now time.Time) (SummarizedPullRequest, err
 		Author:   *v.User.Login,
 		OpenedAt: *v.CreatedAt,
 		ClosedAt: closedAt,
+		State: *v.State,
 	}, nil
 }
 
@@ -267,7 +296,7 @@ func FilterByAuthor(in <-chan SummarizedPullRequest, authors *[]string) <-chan S
 
 // Display formats pull requests onto a html page as they
 // come in from the rest of the pipeline.
-func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy SortBy) <-chan bool {
+func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy SortBy, config Config) <-chan bool {
 	out := make(chan bool)
 	go func() {
 		fmt.Fprintf(w, "<html><head><meta http-equiv='refresh' content='86400'></head><body style='background: #333; color: #fff; width: 50%; margin: 0 auto;'>")
@@ -297,7 +326,7 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 		for _, pr := range prs {
 			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
-			color := "#00cc66"
+			color := getColor(config, now.Sub(pr.OpenedAt).Hours()-now.Sub(pr.ClosedAt).Hours(), pr.State)
 			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, transparent 0%%, transparent %.6f%%, %s %.6f%%, %s %.6f%%, transparent %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
 			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
 		}
@@ -307,6 +336,19 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 		close(out)
 	}()
 	return out
+}
+
+func getColor(config Config, openedFor float64, state string) string {
+	customs := config.Customization
+	if state == "closed" {
+		return customs.ClosedColor
+	}
+	if openedFor < customs.PassiveTime {
+		return customs.PassiveColor
+	} else if openedFor < customs.WarningTime {
+		return customs.WarningColor
+	}
+	return customs.AlertColor
 }
 
 // Len returns length of the ByDate array
