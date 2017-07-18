@@ -51,6 +51,9 @@ func main() {
 	if t.Customization.AlertColor == "" {
 		t.Customization.AlertColor = defaultCustom.AlertColor
 	}
+	if t.Customization.ClosedColor == "" {
+		t.Customization.ClosedColor = defaultCustom.ClosedColor
+	}
 	if t.Customization.PassiveTime == 0 {
 		t.Customization.PassiveTime = defaultCustom.PassiveTime
 	}

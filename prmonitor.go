@@ -36,6 +36,9 @@ type SummarizedPullRequest struct {
 
 	// the time the PR was closed (or the current time).
 	ClosedAt time.Time
+
+	// Current state of the pr: Either open, closed, or all to filter by state. Default: open
+	State string
 }
 
 // SummarizedPullRequests is a slice of SummarizedPullRequest
@@ -85,6 +88,7 @@ func GetCustomizations() Customization {
 		PassiveColor: "#00cc66",
 		WarningColor: "#ffff00",
 		AlertColor:   "#cc0000",
+		ClosedColor: "#999",
 		PassiveTime:  24.0,
 		WarningTime:  48,
 	}
@@ -95,6 +99,7 @@ type Customization struct {
 	PassiveColor string  // #00cc66"
 	WarningColor string  // #ffff00
 	AlertColor   string  // #cc0000
+	ClosedColor  string  // #999
 	PassiveTime  float64 // 24.0
 	WarningTime  float64 // 48
 }
@@ -198,6 +203,7 @@ func Transform(v *github.PullRequest, now time.Time) (SummarizedPullRequest, err
 		Author:   *v.User.Login,
 		OpenedAt: *v.CreatedAt,
 		ClosedAt: closedAt,
+		State: *v.State,
 	}, nil
 }
 
@@ -320,7 +326,7 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 		for _, pr := range prs {
 			start := (total - now.Sub(pr.OpenedAt).Hours()) / total
 			end := (total - now.Sub(pr.ClosedAt).Hours()) / total
-			color := getColor(config, now.Sub(pr.OpenedAt).Hours()-now.Sub(pr.ClosedAt).Hours())
+			color := getColor(config, now.Sub(pr.OpenedAt).Hours()-now.Sub(pr.ClosedAt).Hours(), pr.State)
 			style := fmt.Sprintf(`margin: 2px; background: linear-gradient( 90deg, transparent 0%%, transparent %.6f%%, %s %.6f%%, %s %.6f%%, transparent %.6f%%);`, start*100, color, start*100, color, end*100, end*100)
 			fmt.Fprintf(w, "<div style='%s'><b>%s/%s</b> #%d %s by %s</div>", style, pr.Owner, pr.Repo, pr.Number, pr.Title, pr.Author)
 		}
@@ -332,8 +338,11 @@ func Display(in <-chan SummarizedPullRequest, w io.Writer, now time.Time, sortBy
 	return out
 }
 
-func getColor(config Config, openedFor float64) string {
+func getColor(config Config, openedFor float64, state string) string {
 	customs := config.Customization
+	if state == "closed" {
+		return customs.ClosedColor
+	}
 	if openedFor < customs.PassiveTime {
 		return customs.PassiveColor
 	} else if openedFor < customs.WarningTime {

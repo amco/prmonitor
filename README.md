@@ -57,7 +57,7 @@ vendor directory (so master doesn't have to) and pushes it out to heroku automat
   * CONFIG={"repos": [{"owner": "brentdrich", "repo": "prmonitor"}],
             "customization": {"passiveColor": "#00cc66", "warningColor": "#ffff00",
                               "alertColor":   "#cc0000", "passiveTime":  24.0,
-                              "warningTime":  48 }
+                              "closedColor": "#999", "warningTime":  48}
             }
   * SSLHOST=myapp.herokuapp.com
   * PORT=8081
