@@ -241,7 +241,7 @@ func Retrieve(in chan Repo, client *github.Client, now time.Time, state string, 
 			op.Page = 0
 			op.Base = "master"
 			op.PerPage = r.Depth
-			oprs, _, err := client.PullRequests.List(context.Background(), r.Owner, r.Repo, op)
+			oprs, _, err := client.PullRequests.List(client.Context().Background(), r.Owner, r.Repo, op)
 			if err != nil {
 				return
 			}
